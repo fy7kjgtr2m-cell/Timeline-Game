@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>History Flashback — Order the Events</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#121a27;
+      --panel2:#0f1622;
+      --text:#e9eef7;
+      --muted:#a7b3c7;
+      --border:rgba(255,255,255,.12);
+      --shadow: 0 12px 40px rgba(0,0,0,.35);
+      --radius:18px;
+      --cardRadius:16px;
+      --good:#22c55e;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1000px 500px at 20% 0%, rgba(99,102,241,.18), transparent 55%),
+                  radial-gradient(900px 500px at 80% 10%, rgba(34,197,94,.12), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      line-height:1.35;
+    }
+    .wrap{
+      max-width: 980px;
+      margin: 28px auto;
+      padding: 0 16px 28px;
+    }
+    .header{
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      margin-bottom: 14px;
+    }
+    .titleBlock{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    h1{
+      font-size: 22px;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    .sub{
+      color:var(--muted);
+      font-size: 14px;
+      margin:0;
+      max-width: 70ch;
+    }
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    button{
+      appearance:none;
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+      color:var(--text);
+      padding: 10px 12px;
+      border-radius: 999px;
+      cursor:pointer;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      font-weight:600;
+      font-size: 14px;
+    }
+    button:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+    .pill{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      padding: 8px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 13px;
+      display:flex; gap:8px; align-items:center;
+    }
+    .board{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns: repeat(2, 1fr); }
+    }
+    .slot{
+      min-height: 110px;
+      border:1px dashed rgba(255,255,255,.22);
+      background: rgba(10,15,25,.35);
+      border-radius: var(--cardRadius);
+      padding: 10px;
+      position:relative;
+      overflow:hidden;
+    }
+    .slot::before{
+      content: attr(data-pos);
+      position:absolute;
+      top:10px; left:10px;
+      color: rgba(255,255,255,.18);
+      font-weight:800;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .slot.dragover{
+      border-color: rgba(99,102,241,.75);
+      box-shadow: 0 0 0 4px rgba(99,102,241,.20) inset;
+    }
+    .card{
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+      border-radius: var(--cardRadius);
+      padding: 12px;
+      user-select:none;
+      cursor: grab;
+      transition: transform .15s ease, box-shadow .15s ease;
+      box-shadow: 0 10px 24px rgba(0,0,0,.22);
+    }
+    .card:active{ cursor: grabbing; }
+    .card.dragging{
+      opacity:.65;
+      transform: scale(.98);
+    }
+    .cardTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 6px;
+    }
+    .eventTitle{
+      font-size: 14px;
+      font-weight: 700;
+      margin:0;
+    }
+    .year{
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .hint{
+      color: var(--muted);
+      font-size: 13px;
+      margin:0;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 999px;
+      margin-top: 10px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+    }
+    .badge.good{ border-color: rgba(34,197,94,.5); color: rgba(34,197,94,.95); background: rgba(34,197,94,.08); }
+    .badge.bad{ border-color: rgba(239,68,68,.55); color: rgba(239,68,68,.95); background: rgba(239,68,68,.08); }
+    .footerNote{
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .shake{
+      animation: shake .25s linear 2;
+    }
+    @keyframes shake{
+      0%{ transform: translateX(0); }
+      25%{ transform: translateX(-3px); }
+      50%{ transform: translateX(3px); }
+      75%{ transform: translateX(-2px); }
+      100%{ transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="titleBlock">
+        <h1>Flashback Bell Ringer — Put the Events in Order</h1>
+        <p class="sub">
+          Drag (or tap then tap) the cards into earliest → latest order. Click <b>Check</b>.
+          Then the game reveals the year and snaps everything into the correct timeline.
+        </p>
+      </div>
+      <div class="controls">
+        <span class="pill" id="statusPill">Unanswered</span>
+        <button id="checkBtn">Check</button>
+        <button id="resetBtn" title="Shuffle and start over">Reset</button>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="grid" id="grid"></div>
+      <div class="footerNote">
+        Tip: On phones/tablets, tap a card to “pick it up,” then tap a slot to place it.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========= EDIT YOUR EVENTS HERE =========
+    // Keep it to 6–10 events for a quick bell-ringer.
+    const EVENTS = [
+      { title: "Declaration of Independence adopted", year: 1776, hint: "Break with Britain" },
+      { title: "U.S. Constitution ratified (9th state)", year: 1788, hint: "New framework for government" },
+      { title: "Louisiana Purchase", year: 1803, hint: "Territory doubles" },
+      { title: "Compromise of 1850", year: 1850, hint: "Sectional tension + new territories" },
+      { title: "Emancipation Proclamation issued", year: 1863, hint: "War aims shift" },
+      { title: "Plessy v. Ferguson", year: 1896, hint: "‘Separate but equal’" },
+      { title: "Stock market crash (Black Tuesday)", year: 1929, hint: "Great Depression begins" },
+      { title: "Brown v. Board of Education", year: 1954, hint: "Desegregation ruling" },
+    ];
+    // =======================================
+
+    const grid = document.getElementById("grid");
+    const checkBtn = document.getElementById("checkBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const statusPill = document.getElementById("statusPill");
+
+    const state = {
+      draggedId: null,
+      selectedId: null, // for tap-to-place
+      revealed: false,
+    };
+
+    function shuffle(arr){
+      const a = [...arr];
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function setStatus(text, kind){
+      statusPill.textContent = text;
+      statusPill.className = "pill";
+      if(kind === "good") statusPill.style.borderColor = "rgba(34,197,94,.45)";
+      else if(kind === "bad") statusPill.style.borderColor = "rgba(239,68,68,.45)";
+      else statusPill.style.borderColor = "rgba(255,255,255,.12)";
+    }
+
+    function makeCard(e){
+      const card = document.createElement("div");
+      card.className = "card";
+      card.draggable = true;
+      card.dataset.id = e._id;
+
+      const top = document.createElement("div");
+      top.className = "cardTop";
+
+      const title = document.createElement("p");
+      title.className = "eventTitle";
+      title.textContent = e.title;
+
+      const year = document.createElement("span");
+      year.className = "year";
+      year.textContent = state.revealed ? e.year : "Year?";
+      year.dataset.role = "year";
+
+      top.appendChild(title);
+      top.appendChild(year);
+
+      const hint = document.createElement("p");
+      hint.className = "hint";
+      hint.textContent = e.hint ?? "";
+
+      card.appendChild(top);
+      if(e.hint) card.appendChild(hint);
+
+      // Drag events
+      card.addEventListener("dragstart", () => {
+        state.draggedId = e._id;
+        card.classList.add("dragging");
+      });
+      card.addEventListener("dragend", () => {
+        state.draggedId = null;
+        card.classList.remove("dragging");
+      });
+
+      // Tap-to-place support
+      card.addEventListener("click", (ev) => {
+        if (state.revealed) return;
+        // If tapping a placed card, select it
+        state.selectedId = e._id;
+        document.querySelectorAll(".card").forEach(c => c.style.outline = "none");
+        card.style.outline = "3px solid rgba(99,102,241,.55)";
+        ev.stopPropagation();
+      });
+
+      return card;
+    }
+
+    function makeSlot(pos){
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      slot.dataset.pos = `#${pos+1}`;
+
+      slot.addEventListener("dragover", (e) => {
+        if(state.revealed) return;
+        e.preventDefault();
+        slot.classList.add("dragover");
+      });
+      slot.addEventListener("dragleave", () => slot.classList.remove("dragover"));
+      slot.addEventListener("drop", (e) => {
+        if(state.revealed) return;
+        e.preventDefault();
+        slot.classList.remove("dragover");
+        if(!state.draggedId) return;
+        placeCardInSlot(state.draggedId, slot);
+      });
+
+      // Tap placement: tap a slot after selecting a card
+      slot.addEventListener("click", () => {
+        if(state.revealed) return;
+        if(!state.selectedId) return;
+        placeCardInSlot(state.selectedId, slot);
+        state.selectedId = null;
+        document.querySelectorAll(".card").forEach(c => c.style.outline = "none");
+      });
+
+      return slot;
+    }
+
+    function placeCardInSlot(cardId, slot){
+      // If the slot already has a card, swap it back to the pool (first empty slot in pool region)
+      const cardEl = document.querySelector(`.card[data-id="${cardId}"]`);
+      if(!cardEl) return;
+
+      // If card is currently in another slot, remove it from there.
+      const currentParent = cardEl.parentElement;
+      if(currentParent && currentParent.classList.contains("slot")){
+        currentParent.innerHTML = "";
+        currentParent.appendChild(document.createComment("empty"));
+      }
+
+      // If slot contains something, move it out (swap)
+      const existingCard = slot.querySelector(".card");
+      if(existingCard){
+        // Find an empty slot to move existing card into
+        const emptySlot = [...document.querySelectorAll(".slot")].find(s => !s.querySelector(".card") && s !== slot);
+        if(emptySlot) emptySlot.appendChild(existingCard);
+        else {
+          // If no empty slot, swap directly with the card's original slot
+          if(currentParent && currentParent.classList.contains("slot")){
+            currentParent.appendChild(existingCard);
+          }
+        }
+      }
+
+      slot.appendChild(cardEl);
+      setStatus("In progress", "neutral");
+    }
+
+    function allSlotsFilled(){
+      return [...document.querySelectorAll(".slot")].every(s => s.querySelector(".card"));
+    }
+
+    function getOrderFromSlots(){
+      return [...document.querySelectorAll(".slot")].map(s => s.querySelector(".card")?.dataset.id ?? null);
+    }
+
+    function revealYears(){
+      state.revealed = true;
+      document.querySelectorAll(".card").forEach(card => {
+        const id = card.dataset.id;
+        const ev = EVENTS.find(x => x._id === id);
+        const yearEl = card.querySelector('[data-role="year"]');
+        if(yearEl && ev) yearEl.textContent = ev.year;
+      });
+    }
+
+    function snapToCorrectOrder(){
+      const sorted = [...EVENTS].sort((a,b)=>a.year-b.year);
+      const slots = [...document.querySelectorAll(".slot")];
+      sorted.forEach((ev, idx) => {
+        const card = document.querySelector(`.card[data-id="${ev._id}"]`);
+        if(card && slots[idx]) slots[idx].appendChild(card);
+      });
+    }
+
+    function scoreCurrent(){
+      const sortedIds = [...EVENTS].sort((a,b)=>a.year-b.year).map(e=>e._id);
+      const placed = getOrderFromSlots();
+      let correct = 0;
+      placed.forEach((id, i) => { if(id === sortedIds[i]) correct++; });
+      return { correct, total: EVENTS.length };
+    }
+
+    function check(){
+      if(!allSlotsFilled()){
+        setStatus("Fill every slot first", "bad");
+        grid.classList.add("shake");
+        setTimeout(()=>grid.classList.remove("shake"), 450);
+        return;
+      }
+      const {correct, total} = scoreCurrent();
+
+      revealYears();
+
+      // Show per-card correctness badge BEFORE snapping (so students see what they got)
+      const sortedIds = [...EVENTS].sort((a,b)=>a.year-b.year).map(e=>e._id);
+      const slots = [...document.querySelectorAll(".slot")];
+      slots.forEach((slot, i) => {
+        const card = slot.querySelector(".card");
+        if(!card) return;
+        const existing = card.querySelector(".badge");
+        if(existing) existing.remove();
+
+        const badge = document.createElement("div");
+        badge.className = "badge " + (card.dataset.id === sortedIds[i] ? "good" : "bad");
+        badge.textContent = (card.dataset.id === sortedIds[i]) ? "Correct position" : "Wrong position";
+        card.appendChild(badge);
+      });
+
+      // After a short pause, snap to correct order
+      setTimeout(() => {
+        snapToCorrectOrder();
+        setStatus(`Score: ${correct}/${total} — corrected timeline revealed`, correct===total ? "good" : "bad");
+        checkBtn.disabled = true;
+      }, 850);
+    }
+
+    function reset(){
+      state.draggedId = null;
+      state.selectedId = null;
+      state.revealed = false;
+
+      // Rebuild board
+      grid.innerHTML = "";
+      const shuffled = shuffle(EVENTS.map((e, i)=> ({...e, _id: "e"+i})));
+
+      // create slots
+      for(let i=0;i<shuffled.length;i++){
+        grid.appendChild(makeSlot(i));
+      }
+
+      // place shuffled cards into slots in random order but not necessarily correct (like NYT start screen)
+      // We'll initially place them in the slots as-is; students rearrange by drag/tap.
+      shuffled.forEach((e, i) => {
+        const slot = grid.children[i];
+        slot.appendChild(makeCard(e));
+      });
+
+      checkBtn.disabled = false;
+      setStatus("Unanswered", "neutral");
+    }
+
+    // Clicking outside clears selection
+    document.body.addEventListener("click", () => {
+      state.selectedId = null;
+      document.querySelectorAll(".card").forEach(c => c.style.outline = "none");
+    });
+
+    checkBtn.addEventListener("click", check);
+    resetBtn.addEventListener("click", reset);
+
+    reset();
+  </script>
+</body>
+</html>
